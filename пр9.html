@@ -1,0 +1,447 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>пр9</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h2 id="практическая-работа-№9-гостевая-книга.-часть-1">Практическая работа №9: Гостевая книга. Часть 1</h2>
+<p><strong>Цель:</strong> Создать базу данных SQLite и вывести список сообщений на главной странице.</p>
+<hr>
+<h3 id="задание-1.-создайте-структуру-проекта">Задание 1. Создайте структуру проекта</h3>
+<pre><code>guestbook/
+├── app.py
+├── database.py
+├── requirements.txt
+├── .gitignore
+├── templates/
+│   └── index.html
+└── static/
+</code></pre>
+<h3 id="файл-базы-данных-guestbook.db">Файл базы данных: <code>guestbook.db</code></h3>
+<h3 id="таблица-messages">Таблица: <code>messages</code></h3>
+
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Ограничения</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER</td>
+<td>PRIMARY KEY AUTOINCREMENT</td>
+<td>Уникальный номер сообщения (автоматически увеличивается)</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>NOT NULL</td>
+<td>Имя автора сообщения</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>TEXT</td>
+<td>NOT NULL</td>
+<td>Текст сообщения</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATE</td>
+<td>NOT NULL</td>
+<td>Дата создания сообщения (формат <code>YYYY-MM-DD</code>)</td>
+</tr>
+</tbody>
+</table><hr>
+<h3 id="задание-2.-создайте-модуль-database.py">Задание 2. Создайте модуль <code>database.py</code></h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">import</span> sqlite3
+<span class="token keyword">from</span> datetime <span class="token keyword">import</span> date
+
+DATABASE <span class="token operator">=</span> <span class="token string">'guestbook.db'</span>
+
+<span class="token keyword">def</span> <span class="token function">get_db_connection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> sqlite3<span class="token punctuation">.</span>connect<span class="token punctuation">(</span>DATABASE<span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>row_factory <span class="token operator">=</span> sqlite3<span class="token punctuation">.</span>Row
+    <span class="token keyword">return</span> conn
+
+<span class="token keyword">def</span> <span class="token function">init_db</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> get_db_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span><span class="token triple-quoted-string string">'''
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at DATE NOT NULL
+        )
+    '''</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">get_all_messages</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> get_db_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    messages <span class="token operator">=</span> conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>
+        <span class="token string">'SELECT * FROM messages ORDER BY created_at DESC'</span>
+    <span class="token punctuation">)</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> messages
+
+</code></pre>
+<h3 id="импорт-модулей">1. Импорт модулей</h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">import</span> sqlite3
+<span class="token keyword">from</span> datetime <span class="token keyword">import</span> date
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>Импорт</th>
+<th>Для чего</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqlite3</code></td>
+<td>Встроенный в Python модуль для работы с SQLite</td>
+</tr>
+<tr>
+<td><code>from datetime import date</code></td>
+<td>Для получения текущей даты (<code>date.today()</code>)</td>
+</tr>
+</tbody>
+</table><hr>
+<pre class=" language-python"><code class="prism  language-python">DATABASE <span class="token operator">=</span> <span class="token string">'guestbook.db'</span>
+</code></pre>
+<ul>
+<li>Определяет имя файла базы данных</li>
+<li>Если файла нет, SQLite создаст его автоматически</li>
+<li>Константа пишется заглавными буквами (по соглашению)</li>
+</ul>
+<hr>
+<h3 id="функция-get_db_connection">3. Функция <code>get_db_connection()</code></h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">def</span> <span class="token function">get_db_connection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> sqlite3<span class="token punctuation">.</span>connect<span class="token punctuation">(</span>DATABASE<span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>row_factory <span class="token operator">=</span> sqlite3<span class="token punctuation">.</span>Row
+    <span class="token keyword">return</span> conn
+</code></pre>
+<p><strong>Что делает:</strong> Устанавливает соединение с базой данных.</p>
+
+<table>
+<thead>
+<tr>
+<th>Строка</th>
+<th>Объяснение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqlite3.connect(DATABASE)</code></td>
+<td>Открывает (или создаёт) файл БД</td>
+</tr>
+<tr>
+<td><code>conn.row_factory = sqlite3.Row</code></td>
+<td>Делает так, чтобы строки можно было получать как словари или объекты (например, <code>row['name']</code> или <code>row.name</code>)</td>
+</tr>
+<tr>
+<td><code>return conn</code></td>
+<td>Возвращает соединение для дальнейшей работы</td>
+</tr>
+</tbody>
+</table><hr>
+<h3 id="функция-init_db">4. Функция <code>init_db()</code></h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">def</span> <span class="token function">init_db</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> get_db_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span><span class="token triple-quoted-string string">'''
+        CREATE TABLE IF NOT EXISTS messages (
+            здесь  код для создания полей БД
+        )
+    '''</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><strong>Что делает:</strong> Создаёт таблицу <code>messages</code>, если её ещё нет.</p>
+
+<table>
+<thead>
+<tr>
+<th>Строка</th>
+<th>Объяснение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>conn = get_db_connection()</code></td>
+<td>Получаем соединение с БД</td>
+</tr>
+<tr>
+<td><code>conn.execute('''...''')</code></td>
+<td>Выполняет SQL-запрос</td>
+</tr>
+<tr>
+<td><code>CREATE TABLE IF NOT EXISTS</code></td>
+<td>Создаёт таблицу, если её не существует (безопасно, не удалит данные)</td>
+</tr>
+<tr>
+<td><code>PRIMARY KEY AUTOINCREMENT</code></td>
+<td><code>id</code> — уникальный номер, автоматически увеличивается при добавлении</td>
+</tr>
+<tr>
+<td><code>TEXT NOT NULL</code></td>
+<td>Текстовое поле, не может быть пустым</td>
+</tr>
+<tr>
+<td><code>DATE NOT NULL</code></td>
+<td>Поле для даты, не может быть пустым</td>
+</tr>
+<tr>
+<td><code>conn.commit()</code></td>
+<td>Сохраняет изменения (фиксирует транзакцию)</td>
+</tr>
+<tr>
+<td><code>conn.close()</code></td>
+<td>Закрывает соединение с БД</td>
+</tr>
+</tbody>
+</table><hr>
+<h3 id="функция-get_all_messages">5. Функция <code>get_all_messages()</code></h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">def</span> <span class="token function">get_all_messages</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> get_db_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    messages <span class="token operator">=</span> conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>
+        <span class="token string">'SELECT * FROM messages ORDER BY created_at DESC'</span>
+    <span class="token punctuation">)</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> messages
+</code></pre>
+<p><strong>Что делает:</strong> Возвращает все сообщения из таблицы, отсортированные от новых к старым.</p>
+
+<table>
+<thead>
+<tr>
+<th>Строка</th>
+<th>Объяснение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>conn = get_db_connection()</code></td>
+<td>Подключаемся к БД</td>
+</tr>
+<tr>
+<td><code>conn.execute('SELECT * FROM messages...')</code></td>
+<td>Выполняем запрос на чтение</td>
+</tr>
+<tr>
+<td><code>SELECT *</code></td>
+<td>Выбрать все поля (<code>id, name, message, created_at</code>)</td>
+</tr>
+<tr>
+<td><code>ORDER BY created_at DESC</code></td>
+<td>Сортировка по дате: сначала новые (DESC — убывание), потом старые</td>
+</tr>
+<tr>
+<td><code>.fetchall()</code></td>
+<td>Получить <strong>все</strong> строки результата в виде списка</td>
+</tr>
+<tr>
+<td><code>conn.close()</code></td>
+<td>Закрываем соединение</td>
+</tr>
+<tr>
+<td><code>return messages</code></td>
+<td>Возвращаем список сообщений</td>
+</tr>
+</tbody>
+</table><hr>
+<h2 id="визуализация-потока-данных">Визуализация потока данных</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                      database.py                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  get_db_connection()                                        │
+│       ↓                                                     │
+│  ┌─────────────────┐                                        │
+│  │ SQLite (.db файл)│                                        │
+│  └─────────────────┘                                        │
+│       ↓                                                     │
+│  init_db() → создаёт таблицу (один раз)                     │
+│       ↓                                                     │
+│  get_all_messages() → SELECT → fetchall() → возвращает список│
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<hr>
+<h2 id="что-вернёт-get_all_messages">Что вернёт <code>get_all_messages()</code></h2>
+<p>Пример содержимого БД:</p>
+
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>message</th>
+<th>created_at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Анна</td>
+<td>Привет!</td>
+<td>2026-05-28</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Иван</td>
+<td>Всем привет</td>
+<td>2026-05-27</td>
+</tr>
+</tbody>
+</table><p>Функция вернёт список объектов (словарей):</p>
+<pre class=" language-python"><code class="prism  language-python"><span class="token punctuation">[</span>
+    <span class="token punctuation">{</span><span class="token string">'id'</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'Анна'</span><span class="token punctuation">,</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Привет!'</span><span class="token punctuation">,</span> <span class="token string">'created_at'</span><span class="token punctuation">:</span> <span class="token string">'2026-05-28'</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span><span class="token string">'id'</span><span class="token punctuation">:</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'Иван'</span><span class="token punctuation">,</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Всем привет'</span><span class="token punctuation">,</span> <span class="token string">'created_at'</span><span class="token punctuation">:</span> <span class="token string">'2026-05-27'</span><span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>В шаблоне к ним обращаются так:</p>
+<pre class=" language-html"><code class="prism  language-html">{{ msg.name }}
+{{ msg.message }}
+{{ msg.created_at }}
+</code></pre>
+<hr>
+<h2 id="важные-замечания">Важные замечания</h2>
+
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Почему важно</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>conn.row_factory = sqlite3.Row</code></td>
+<td>Позволяет писать <code>msg['name']</code> вместо <code>msg[1]</code> (удобнее и понятнее)</td>
+</tr>
+<tr>
+<td><code>conn.commit()</code></td>
+<td>Без него изменения не сохранятся в файл</td>
+</tr>
+<tr>
+<td><code>conn.close()</code></td>
+<td>Всегда закрывайте соединение, чтобы не тратить ресурсы</td>
+</tr>
+<tr>
+<td><code>IF NOT EXISTS</code></td>
+<td>При повторном запуске не удалит существующую таблицу с данными</td>
+</tr>
+</tbody>
+</table><hr>
+<h3 id="задание-3.-добавьте-тестовые-данные-временно">Задание 3. Добавьте тестовые данные (временно)</h3>
+<p>Чтобы увидеть, что таблица работает, добавьте функцию <code>add_test_messages()</code>:</p>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">def</span> <span class="token function">add_test_messages</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    conn <span class="token operator">=</span> get_db_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>
+        <span class="token string">'INSERT INTO messages (name, message, created_at) VALUES (?, ?, ?)'</span><span class="token punctuation">,</span>
+        <span class="token punctuation">(</span><span class="token string">'Анна'</span><span class="token punctuation">,</span> <span class="token string">'Отличный сайт!'</span><span class="token punctuation">,</span> <span class="token string">'2026-05-28'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>
+        <span class="token string">'INSERT INTO messages .... '</span><span class="token punctuation">)</span>дополните тут код
+    <span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conn<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>В <code>init_db()</code> после создания таблицы добавьте <code>add_test_messages()</code> (потом уберёте).</p>
+<hr>
+<h3 id="задание-4.-создайте-app.py">Задание 4. Создайте <code>app.py</code></h3>
+<pre class=" language-python"><code class="prism  language-python"><span class="token comment"># Импортируем необходимые классы и функции из Flask</span>
+<span class="token comment"># Flask - основной класс для создания веб-приложения</span>
+<span class="token comment"># render_template - функция для отображения HTML-шаблонов</span>
+<span class="token keyword">from</span> flask <span class="token keyword">import</span> Flask<span class="token punctuation">,</span> render_template
+
+<span class="token comment"># Импортируем наши функции из файла database.py</span>
+<span class="token comment"># init_db - создаёт таблицу в базе данных, если её нет</span>
+<span class="token comment"># get_all_messages - получает все сообщения из базы данных</span>
+<span class="token keyword">from</span> database <span class="token keyword">import</span> init_db<span class="token punctuation">,</span> get_all_messages
+
+<span class="token comment"># Создаём экземпляр Flask-приложения</span>
+<span class="token comment"># __name__ - специальная переменная Python, которая хранит имя текущего модуля</span>
+<span class="token comment"># Flask использует её, чтобы найти папки templates и static</span>
+app <span class="token operator">=</span> Flask<span class="token punctuation">(</span>__name__<span class="token punctuation">)</span>
+
+<span class="token comment"># Инициализируем базу данных при запуске приложения</span>
+<span class="token comment"># Вызываем функцию init_db(), которая создаёт таблицу messages, если её ещё нет</span>
+<span class="token comment"># Это происходит один раз при старте сервера</span>
+init_db<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Определяем маршрут (URL) для главной страницы</span>
+<span class="token comment"># @app.route - это декоратор, который связывает URL с функцией ниже</span>
+<span class="token comment"># '/' - означает корневой адрес сайта (например, http://127.0.0.1:5000/)</span>
+@app<span class="token punctuation">.</span>route<span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">)</span>
+<span class="token keyword">def</span> <span class="token function">index</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># Эта функция вызывается, когда пользователь открывает главную страницу</span>
+    
+    <span class="token comment"># Получаем все сообщения из базы данных</span>
+    <span class="token comment"># get_all_messages() возвращает список словарей или объектов Row</span>
+    <span class="token comment"># Каждый элемент содержит поля: id, name, message, created_at</span>
+    messages <span class="token operator">=</span> get_all_messages<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># Отображаем HTML-шаблон и передаём в него данные</span>
+    <span class="token comment"># render_template ищет файл в папке templates</span>
+    <span class="token comment"># 'index.html' - имя файла шаблона</span>
+    <span class="token comment"># messages=messages - передаём переменную messages в шаблон под тем же именем</span>
+    <span class="token comment"># В шаблоне к ней можно обратиться как {{ messages }}</span>
+    <span class="token keyword">return</span> render_template<span class="token punctuation">(</span><span class="token string">'index.html'</span><span class="token punctuation">,</span> messages<span class="token operator">=</span>messages<span class="token punctuation">)</span>
+
+<span class="token comment"># Проверяем, запущен ли файл напрямую (а не импортирован как модуль)</span>
+<span class="token comment"># __name__ == '__main__' означает "этот файл запущен, а не импортирован"</span>
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+    <span class="token comment"># Запускаем встроенный веб-сервер Flask</span>
+    <span class="token comment"># debug=True включает режим отладки:</span>
+    <span class="token comment">#   - сервер перезапускается при изменении кода</span>
+    <span class="token comment">#   - при ошибке показывается подробный отчёт в браузере</span>
+    <span class="token comment">#   - НЕ ИСПОЛЬЗОВАТЬ на реальных серверах (только для разработки)</span>
+    app<span class="token punctuation">.</span>run<span class="token punctuation">(</span>debug<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+</code></pre>
+<hr>
+<h3 id="задание-5.-создайте-templatesindex.html">Задание 5. Создайте <code>templates/index.html</code></h3>
+<pre class=" language-html"><code class="prism  language-html"><span class="token doctype">&lt;!DOCTYPE html&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>html</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>head</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>title</span><span class="token punctuation">&gt;</span></span>Гостевая книга<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>title</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>head</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>body</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>h1</span><span class="token punctuation">&gt;</span></span>📖 Гостевая книга<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>h1</span><span class="token punctuation">&gt;</span></span>
+    
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>h2</span><span class="token punctuation">&gt;</span></span>Сообщения<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>h2</span><span class="token punctuation">&gt;</span></span>
+    {% if messages %}
+        {% for msg in messages %}
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>strong</span><span class="token punctuation">&gt;</span></span>{{ msg.name }}<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>strong</span><span class="token punctuation">&gt;</span></span> ({{ msg.created_at }})
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">&gt;</span></span>{{ msg.message }}<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">&gt;</span></span>
+        {% endfor %}
+    {% else %}
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">&gt;</span></span>Пока нет сообщений.<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">&gt;</span></span>
+    {% endif %}
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>body</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>html</span><span class="token punctuation">&gt;</span></span>
+</code></pre>
+<hr>
+<h3 id="что-проверяется-в-пр9">Что проверяется в ПР9</h3>
+<ul>
+<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled=""> Создана база данных <code>guestbook.db</code></li>
+<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled=""> Создана таблица <code>messages</code></li>
+<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled=""> На главной странице отображаются сообщения из БД</li>
+<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled=""> Новые сообщения появляются сверху</li>
+</ul>
+</div>
+</body>
+
+</html>
